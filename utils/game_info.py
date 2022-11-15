@@ -6,7 +6,7 @@ class Game():
         self.mode = 0
         self.memory = ['back' for i in range(args.region_num)]
         self.selection = [0, 1]
-        self.com_turn = True #random.choice([True, False])
+        self.com_turn = random.choice([True, False])
         self.com_score = 0
         self.player_score = 0
         self.pick = []
