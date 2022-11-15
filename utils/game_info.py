@@ -1,56 +1,58 @@
 import random
 
-class Game:
-    def __init__(self, card_num):
+
+class Game():
+    def __init__(self, args):
         self.mode = 0
-        self.memory = ['back' for i in range(card_num)]
+        self.memory = ['back' for i in range(args.region_num)]
         self.selection = [0, 1]
-        self.score = [0, 0]
-        self.com_turn = random.choice([True, False])
+        self.com_turn = True #random.choice([True, False])
         self.com_score = 0
         self.player_score = 0
         self.pick = []
         self.correct_flag = None
         self.end_flag = False
 
-
-    def remember(self, data_label, card_num):
+    def remember(self, region_info, card_num):
         for i in range(card_num):
-            if data_label[2][i] != 'back':
-                self.memory[i] = data_label[2][i]
-
-
-    def forget(self, card):
-        self.memory = [i for i in self.memory if i != card]
-
+            if region_info[2][i] != 'back':
+                self.memory[i] = region_info[2][i]
 
     def choose(self):
-        duplication = [card for card in set(self.memory)
-                       if self.memory.count(card) > 1 and card != 'back']
+        duplication = [
+            card for card in set(self.memory)
+            if self.memory.count(card) > 1 and card != 'back'
+        ]
         if duplication:
             for i in duplication:
-                self.selection = [j for j, card in enumerate(self.memory)
-                                  if card == i]
+                self.selection = [
+                    j for j, card in enumerate(self.memory)if card == i
+                ]
         else:
-            unknown = [i for i, card in enumerate(self.memory) if card == 'back']
+            unknown = [
+                i for i, card in enumerate(self.memory) if card == 'back'
+            ]
             self.selection = random.sample(unknown, 2)
 
-        return self.selection
-
-
-    def judge(self, data_label, card_num):
-        self.pick = []
+    def judge(self, region_info, card_num):
+        pick = []
         for i in range(card_num):
-            if data_label[2][i] != "back":
-                self.pick.append(data_label[2][i])
-        if self.pick[0] == self.pick[1]:
+            if region_info[2][i] != "back":
+                pick.append(i)
+        if region_info[2][pick[0]] == region_info[2][pick[1]]:
+            self._forget(pick)
             if self.com_turn == True:
                 self.com_score += 2
             else:
                 self.player_score += 2
-            return True
-        return False
 
+            self.correct_flag = True
+        else:
+            self.correct_flag = False
+
+    def _forget(self, picks):
+        self.memory.pop(picks[0])
+        self.memory.pop(picks[1])
 
     def text(self, turn, mode):
         if turn == True:

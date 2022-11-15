@@ -1,38 +1,44 @@
+import argparse
 import cv2
-import time
-import sys
 
-from readonly import Read
-from rungame import Game
+from utils.camera_handle import Camera
+from utils.game_info import Game
+
+
+def option_parser():
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        '-d', '--data_dir', type=str, default="./preprocess/data/"
+    )
+    parser.add_argument('-n', '--region_num', type=int, default=6)
+
+    return parser.parse_args()
 
 
 def main():
-    cap = cv2.VideoCapture(0)
-    time.sleep(1)
+    args = option_parser()
 
-    card_num = int(sys.argv[1])
-    camera = Read(cap)
-    game = Game(card_num)
+    camera = Camera(args)
+    game = Game(args)
 
     while True:
-        camera.show_game(card_num, game.selection)
+        camera.read_frame()
         camera.show_score(game.com_score, game.player_score)
-        data_label = camera.make_label()
-        data_label = camera.reshape(data_label)
-        camera.inner_conversion()
+        camera.find_cards()
+        print(camera.hold_mark)
+
+        k = cv2.waitKey(1)
+        if k == ord("q"):
+            break
 
         if game.end_flag == True:
             camera.show_text("End of game")
-            game.mode = 10
             if game.com_score > game.player_score:
                 camera.show_result("Computer WIN!")
             elif game.com_score < game.player_score:
                 camera.show_result("Player WIN!")
             else:
                 camera.show_result("TIE!")
-
-        k = cv2.waitKey(1)
-        if k == ord("q"):
             break
 
         if k == ord("n"):
@@ -41,40 +47,35 @@ def main():
             if game.mode == 1 and game.com_turn == True:
                 game.choose()
                 print("choosed!")
-                camera.mark_flag = not camera.mark_flag
                 camera.hold_mark_flag = not camera.hold_mark_flag
+                camera.update_hold_mark(game.selection)
                 print("marked!")
 
             if game.mode == 2:
                 if game.com_turn == True:
                     camera.hold_mark.clear()
                     camera.hold_mark_flag = not camera.hold_mark_flag
-                    camera.mark_flag = not camera.mark_flag
                     print("unmarked!")
-                game.remember(data_label, card_num)
+                game.remember(camera.region_info, camera.card_num)
                 print("memorized!")
-                if game.judge(data_label, card_num):
-                    game.correct_flag = True
-                    card_num -= 2
-                    if card_num == 0:
+
+                game.judge(camera.region_info, camera.card_num)
+                if game.correct_flag == True:
+                    camera.card_num -= 2
+                    if camera.card_num == 0:
                         game.end_flag = True
-                else:
-                    game.correct_flag = False
 
             if game.mode == 3:
                 if game.correct_flag == True:
-                    game.forget(game.pick[0])
-                    game.correct_flag = None
+                    game.mode = 1
+                game.correct_flag = None
 
             if game.mode == 4:
-                if game.correct_flag == False:
-                    game.com_turn = not game.com_turn
+                game.com_turn = not game.com_turn
                 game.mode = 0
 
         camera.show_text(game.text(game.com_turn, game.mode))
-
-        cv2.imshow("frame", camera.mark_frame)
-        camera.show_mask(data_label)
+        camera.show_frame()
 
     camera.cap.release()
     cv2.destroyAllWindows()
